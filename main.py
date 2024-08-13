@@ -140,6 +140,7 @@ def confirm_delete(message):
             bot.send_message(message.chat.id, "Неверный выбор. Введите команду снова.")
 
 
+# надо чтобы пользователь выбрал что изменить
 @bot.message_handler(commands=['edit'])
 def edit_staff(message):
     con = sl.connect('database.db')
@@ -183,25 +184,16 @@ def confirm_edit(message):
 
         if data:
             msg = bot.send_message(message.chat.id, "Введите новые данные для сотрудника.")
-            bot.register_next_step_handler(msg, new_data)
+            bot.register_next_step_handler(msg, add_new_staff)
         else:
             bot.send_message(message.chat.id, "Неверный выбор. Введите команду снова.")
 
 
-def new_data(message):
-    staff_data = message.text.split()
-    surname = staff_data[0]
-    name = staff_data[1]
-    patronymic = staff_data[2]
-    post = staff_data[3]
-    project = staff_data[4]
-    datearrival = staff_data[5]
-    staff_id = staff_data[6]
-
+def new_data(message, surname, name, patronymic, post, project, datearrival, staffid):
     con = sl.connect('database.db')
     with con:
         con.execute("UPDATE staff SET surname = ?, name = ?, patronymic = ?, post = ?, project = ?, datearrival = ? WHERE staffid = ?",
-                    (surname, name, patronymic, post, project, datearrival, staff_id))
+                    (surname, name, patronymic, post, project, datearrival, staffid))
     bot.send_message(message.chat.id, "Данные сотрудника обновлены.")
 
 
