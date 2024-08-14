@@ -119,7 +119,8 @@ def delete_staff(message):
         data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff")
         staff_list = []
         for row in data:
-            staff_list.append(f"ID сотрудника - {row[0]}\nФИО - {row[1]} {row[2]} {row[3]}\nдолжность - {row[4]}\nпроект - {row[5]}\nдата прихода сотрудника - {row[6]}\n")
+            staff_list.append(
+                f"ID сотрудника - {row[0]}\nФИО - {row[1]} {row[2]} {row[3]}\nдолжность - {row[4]}\nпроект - {row[5]}\nдата прихода сотрудника - {row[6]}\n")
         if staff_list == []:
             bot.send_message(message.chat.id, "Нет доступных сотрудников для удаления. Добавьте сотрудника с помощью команды /add.")
         else:
@@ -149,51 +150,71 @@ def edit_staff(message):
         staff_list = []
         for row in data:
             staff_list.append(
-                f"ID сотрудника | {row[0]} | ФИО | {row[1]} {row[2]} {row[3]} | должность | {row[4]} | проект | {row[5]} | дата прихода сотрудника | {row[6]}\n")
-        if staff_list == []:
+                f"ID сотрудника - {row[0]}\nФИО - {row[1]} {row[2]} {row[3]}\nдолжность - {row[4]}\nпроект - {row[5]}\nдата прихода сотрудника - {row[6]}\n")
+        if not staff_list:
             bot.send_message(message.chat.id, "Нет доступных сотрудников для редактирования. Добавьте сотрудника с помощью команды /add.")
         else:
             msg = bot.send_message(message.chat.id,
-                                "Введите ID сотрудника, которого нужно отредактировать:\n" + "\n".join(staff_list))
-            bot.register_next_step_handler(msg, confirm_edit)
+                                  "Введите ID сотрудника, которого нужно отредактировать:\n" + "\n".join(staff_list))
+            bot.register_next_step_handler(msg, edit_surname)
 
 
-def add_new_staff(message):
-    add_surname(message)
-    save_surname(message)
-    add_name(message)
-    save_name(message)
-    add_patronymic(message)
-    save_patronymic(message)
-    add_post(message)
-    save_post(message)
-    add_project(message)
-    save_project(message)
-    add_date_arrival(message)
-    save_date_arrival(message)
-    add_staffid(message)
-    save_staffid(message)
-    new_data(message, surname, name, patronymic, post, project, datearrival, staffid)
-
-
-def confirm_edit(message):
+def edit_surname(message):
+    global staff_id
     staff_id = message.text.strip()
     con = sl.connect('database.db')
     with con:
         data = con.execute("SELECT staffid FROM staff WHERE staffid = ?", (staff_id,)).fetchone()
-
         if data:
-            msg = bot.send_message(message.chat.id, "Введите новые данные для сотрудника.")
-            bot.register_next_step_handler(msg, add_new_staff)
+            msg = bot.send_message(message.chat.id, "Введите новую фамилию сотрудника")
+            bot.register_next_step_handler(msg, edit_name)
         else:
             bot.send_message(message.chat.id, "Неверный выбор. Введите команду снова.")
 
 
-def new_data(message, surname, name, patronymic, post, project, datearrival, staffid):
+def edit_name(message):
+    global surname
+    surname = message.text
+    msg = bot.send_message(message.chat.id, "Введите новое имя сотрудника")
+    bot.register_next_step_handler(msg, edit_patronymic)
+
+
+def edit_patronymic(message):
+    global name
+    name = message.text
+    msg = bot.send_message(message.chat.id, "Введите новое отчество сотрудника (если нет, поставьте -)")
+    bot.register_next_step_handler(msg, edit_post)
+
+
+def edit_post(message):
+    global patronymic
+    patronymic = message.text
+    msg = bot.send_message(message.chat.id, "Введите новую должность сотрудника")
+    bot.register_next_step_handler(msg, edit_project)
+
+
+def edit_project(message):
+    global post
+    post = message.text
+    msg = bot.send_message(message.chat.id, "Введите новый проект сотрудника")
+    bot.register_next_step_handler(msg, edit_date_arrival)
+
+
+def edit_date_arrival(message):
+    global project
+    project = message.text
+    msg = bot.send_message(message.chat.id, "Введите новую дату прихода сотрудника")
+    bot.register_next_step_handler(msg, save_edit)
+
+
+def save_edit(message):
+    global datearrival
+    datearrival = message.text
+
     con = sl.connect('database.db')
     with con:
         con.execute("UPDATE staff SET surname = ?, name = ?, patronymic = ?, post = ?, project = ?, datearrival = ? WHERE staffid = ?",
-                    (surname, name, patronymic, post, project, datearrival, staffid))
+                    (surname, name, patronymic, post, project, datearrival, staff_id))
     bot.send_message(message.chat.id, "Данные сотрудника обновлены.")
 
 
