@@ -1,5 +1,6 @@
 import telebot
 import sqlite3 as sl
+from telebot import types
 
 bot = telebot.TeleBot('7420367939:AAEvcAYcINdSu5wPSWJuhOJ_rWIfYr2OIkU')
 con = sl.connect('database.db')
@@ -50,7 +51,7 @@ def save_name(message):
 
 
 def add_patronymic(message):
-    msg = bot.send_message(message.chat.id, 'Введите отчество сотрудника (если нет, поставьте -)')
+    msg = bot.send_message(message.chat.id, 'Введите отчество сотрудника')
     bot.register_next_step_handler(msg, save_patronymic)
 
 
@@ -144,6 +145,18 @@ def confirm_delete(message):
 # надо чтобы пользователь выбрал что изменить
 @bot.message_handler(commands=['edit'])
 def edit_staff(message):
+    keyboard = types.InlineKeyboardMarkup()
+    key_fio = types.InlineKeyboardButton(text='Редактировать ФИО', callback_data='yes')
+    keyboard.add(key_fio)
+    key_post = types.InlineKeyboardButton(text='Редактировать должность', callback_data='no')
+    keyboard.add(key_post)
+    key_project = types.InlineKeyboardButton(text='Редактировать проект', callback_data='no')
+    keyboard.add(key_project)
+    key_datearrival = types.InlineKeyboardButton(text='Редактировать дату прихода', callback_data='no')
+    keyboard.add(key_datearrival)
+    key_all = types.InlineKeyboardButton(text='Редактировать все данные', callback_data='no')
+    keyboard.add(key_all)
+
     con = sl.connect('database.db')
     with con:
         data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff")
@@ -155,7 +168,7 @@ def edit_staff(message):
             bot.send_message(message.chat.id, "Нет доступных сотрудников для редактирования. Добавьте сотрудника с помощью команды /add.")
         else:
             msg = bot.send_message(message.chat.id,
-                                  "Введите ID сотрудника, которого нужно отредактировать:\n" + "\n".join(staff_list))
+                                  "Введите ID сотрудника, которого нужно отредактировать:\n" + "\n".join(staff_list), reply_markup=keyboard)
             bot.register_next_step_handler(msg, edit_surname)
 
 
@@ -182,7 +195,7 @@ def edit_name(message):
 def edit_patronymic(message):
     global name
     name = message.text
-    msg = bot.send_message(message.chat.id, "Введите новое отчество сотрудника (если нет, поставьте -)")
+    msg = bot.send_message(message.chat.id, "Введите новое отчество сотрудника")
     bot.register_next_step_handler(msg, edit_post)
 
 
@@ -220,7 +233,28 @@ def save_edit(message):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(message.chat.id, 'Вас приветствует Info Staff Bot! Чтобы ознакомиться со списком доступных команд введите команду /help.')
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn1 = types.KeyboardButton("Добавить сотрудника")
+    btn2 = types.KeyboardButton("Удалить сотрудника")
+    btn3 = types.KeyboardButton("Редактировать сотрудника")
+    btn4 = types.KeyboardButton("Найти сотрудника")
+    markup.add(btn1, btn2, btn3, btn4)
+
+    bot.send_message(message.chat.id, 'Вас приветствует Info Staff Bot! Чтобы ознакомиться со списком доступных команд введите команду /help.', reply_markup=markup)
+
+
+@bot.message_handler(content_types=['text'])
+def button_start(message):
+    if message.text == "Добавить сотрудника":
+        add_surname(message)
+    elif message.text == "Удалить сотрудника":
+        delete_staff(message)
+    elif message.text == "Редактировать сотрудника":
+        edit_staff(message)
+    # elif message.text == "Найти сотрудника":
+    #     bot.send_message(message.chat.id, text="Поздороваться с читателями")
+    else:
+        bot.send_message(message.chat.id, text="На такую комманду я не запрограммировал..")
 
 
 @bot.message_handler(commands=['help'])
