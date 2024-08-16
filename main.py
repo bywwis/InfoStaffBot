@@ -142,7 +142,6 @@ def confirm_delete(message):
             bot.send_message(message.chat.id, "Неверный выбор. Введите команду снова.")
 
 
-# надо чтобы пользователь выбрал что изменить
 @bot.message_handler(commands=['edit'])
 def edit_staff(message):
     keyboard = types.InlineKeyboardMarkup()
@@ -231,6 +230,11 @@ def save_edit(message):
     bot.send_message(message.chat.id, "Данные сотрудника обновлены.")
 
 
+@bot.message_handler(commands=['search'])
+def search_staff(message):
+    pass
+
+
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -251,10 +255,10 @@ def button_start(message):
         delete_staff(message)
     elif message.text == "Редактировать сотрудника":
         edit_staff(message)
-    # elif message.text == "Найти сотрудника":
-    #     bot.send_message(message.chat.id, text="Поздороваться с читателями")
+    elif message.text == "Найти сотрудника":
+        search_staff(message)
     else:
-        bot.send_message(message.chat.id, text="На такую комманду я не запрограммировал..")
+        bot.send_message(message.chat.id, text="На такую команду я не запрограммирован...")
 
 
 @bot.message_handler(commands=['help'])
