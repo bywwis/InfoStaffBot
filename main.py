@@ -271,25 +271,31 @@ def search_staff(message):
 
 
 def handle_search(message):
-    search_query = message.text.strip().lower()
+    search_query = message.text.strip()
     con = sl.connect('database.db')
     with con:
         if search_query.isdigit():
             data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff WHERE staffid = ?", (search_query,)).fetchone()
+            if data:
+                staff_info = f"ID сотрудника - {data[0]}\nФИО - {data[1]} {data[2]} {data[3]}\nдолжность - {data[4]}\nпроект - {data[5]}\nдата прихода сотрудника - {data[6]}"
+                bot.send_message(message.chat.id, staff_info)
+            else:
+                bot.send_message(message.chat.id, "Сотрудник не найден. Проверьте введенные данные.")
         else:
             search_query_parts = search_query.split()
             if len(search_query_parts) == 3:
-                data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff WHERE LOWER(surname) = ? AND LOWER(name) = ? AND LOWER(patronymic) = ?", search_query_parts).fetchone()
+                data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff WHERE surname = ? AND name = ? AND patronymic = ?", search_query_parts).fetchall()
             elif len(search_query_parts) == 2:
-                data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff WHERE LOWER(surname) = ? AND LOWER(name) = ?", search_query_parts).fetchone()
+                data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff WHERE surname = ? AND name = ?", search_query_parts).fetchall()
             else:
-                data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff WHERE LOWER(surname) = ?", (search_query,)).fetchone()
+                data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff WHERE surname = ?", (search_query,)).fetchall()
 
-        if data:
-            staff_info = f"ID сотрудника - {data[0]}\nФИО - {data[1]} {data[2]} {data[3]}\nдолжность - {data[4]}\nпроект - {data[5]}\nдата прихода сотрудника - {data[6]}"
-            bot.send_message(message.chat.id, staff_info)
-        else:
-            bot.send_message(message.chat.id, "Сотрудник не найден. Проверьте введенные данные.")
+            if data:
+                for row in data:
+                    staff_info = f"ID сотрудника - {row[0]}\nФИО - {row[1]} {row[2]} {row[3]}\nдолжность - {row[4]}\nпроект - {row[5]}\nдата прихода сотрудника - {row[6]}"
+                    bot.send_message(message.chat.id, staff_info)
+            else:
+                bot.send_message(message.chat.id, "Сотрудник не найден. Проверьте введенные данные.")
 
 
 
