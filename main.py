@@ -144,17 +144,17 @@ def confirm_delete(message):
 
 @bot.message_handler(commands=['edit'])
 def edit_staff(message):
-    keyboard = types.InlineKeyboardMarkup()
-    key_fio = types.InlineKeyboardButton(text='Редактировать ФИО', callback_data='yes')
-    keyboard.add(key_fio)
-    key_post = types.InlineKeyboardButton(text='Редактировать должность', callback_data='no')
-    keyboard.add(key_post)
-    key_project = types.InlineKeyboardButton(text='Редактировать проект', callback_data='no')
-    keyboard.add(key_project)
-    key_datearrival = types.InlineKeyboardButton(text='Редактировать дату прихода', callback_data='no')
-    keyboard.add(key_datearrival)
-    key_all = types.InlineKeyboardButton(text='Редактировать все данные', callback_data='no')
-    keyboard.add(key_all)
+    # keyboard = types.InlineKeyboardMarkup()
+    # key_fio = types.InlineKeyboardButton(text='Редактировать ФИО', callback_data='edit_fio')
+    # keyboard.add(key_fio)
+    # key_post = types.InlineKeyboardButton(text='Редактировать должность', callback_data='edit_post')
+    # keyboard.add(key_post)
+    # key_project = types.InlineKeyboardButton(text='Редактировать проект', callback_data='edit_project')
+    # keyboard.add(key_project)
+    # key_datearrival = types.InlineKeyboardButton(text='Редактировать дату прихода', callback_data='edit_datearrival')
+    # keyboard.add(key_datearrival)
+    # key_all = types.InlineKeyboardButton(text='Редактировать все данные', callback_data='edit_all')
+    # keyboard.add(key_all)
 
     con = sl.connect('database.db')
     with con:
@@ -164,11 +164,45 @@ def edit_staff(message):
             staff_list.append(
                 f"ID сотрудника - {row[0]}\nФИО - {row[1]} {row[2]} {row[3]}\nдолжность - {row[4]}\nпроект - {row[5]}\nдата прихода сотрудника - {row[6]}\n")
         if not staff_list:
-            bot.send_message(message.chat.id, "Нет доступных сотрудников для редактирования. Добавьте сотрудника с помощью команды /add.")
+            bot.send_message(message.chat.id,
+                             "Нет доступных сотрудников для редактирования. Добавьте сотрудника с помощью команды /add.")
         else:
             msg = bot.send_message(message.chat.id,
-                                  "Введите ID сотрудника, которого нужно отредактировать:\n" + "\n".join(staff_list), reply_markup=keyboard)
+                                   "Введите ID сотрудника, которого нужно отредактировать:\n" + "\n".join(staff_list))
             bot.register_next_step_handler(msg, edit_surname)
+
+
+# @bot.callback_query_handler(func=lambda call: True)
+# def handle_edit_choice(call):
+#     global staff_id
+#     staff_id = call.message.text.split('\n')[0].split(' - ')[1]
+#     if call.data == 'edit_fio':
+#         msg = bot.send_message(call.message.chat.id, f"Введите новую фамилию для сотрудника с ID {staff_id}")
+#         bot.register_next_step_handler(msg, edit_surname)
+#     elif call.data == 'edit_post':
+#         msg = bot.send_message(call.message.chat.id, f"Введите новую должность для сотрудника с ID {staff_id}")
+#         bot.register_next_step_handler(msg, edit_post)
+#     elif call.data == 'edit_project':
+#         msg = bot.send_message(call.message.chat.id, f"Введите новый проект для сотрудника с ID {staff_id}")
+#         bot.register_next_step_handler(msg, edit_project)
+#     elif call.data == 'edit_datearrival':
+#         msg = bot.send_message(call.message.chat.id, f"Введите новую дату прихода для сотрудника с ID {staff_id}")
+#         bot.register_next_step_handler(msg, edit_date_arrival)
+#     elif call.data == 'edit_all':
+#         msg = bot.send_message(call.message.chat.id, f"Введите новую фамилию для сотрудника с ID {staff_id}")
+#         bot.register_next_step_handler(msg, edit_surname)
+#         msg = bot.send_message(call.message.chat.id, f"Введите новое имя для сотрудника с ID {staff_id}")
+#         bot.register_next_step_handler(msg, edit_name)
+#         msg = bot.send_message(call.message.chat.id, f"Введите новое отчество для сотрудника с ID {staff_id}")
+#         bot.register_next_step_handler(msg, edit_patronymic)
+#         msg = bot.send_message(call.message.chat.id, f"Введите новую должность для сотрудника с ID {staff_id}")
+#         bot.register_next_step_handler(msg, edit_post)
+#         msg = bot.send_message(call.message.chat.id, f"Введите новый проект для сотрудника с ID {staff_id}")
+#         bot.register_next_step_handler(msg, edit_project)
+#         msg = bot.send_message(call.message.chat.id, f"Введите новую дату прихода для сотрудника с ID {staff_id}")
+#         bot.register_next_step_handler(msg, edit_date_arrival)
+#     else:
+#         bot.send_message(call.message.chat.id, "Неверный выбор. Введите команду снова.")
 
 
 def edit_surname(message):
@@ -232,7 +266,31 @@ def save_edit(message):
 
 @bot.message_handler(commands=['search'])
 def search_staff(message):
-    pass
+    msg = bot.send_message(message.chat.id, "Введите ФИО или ID сотрудника для поиска:")
+    bot.register_next_step_handler(msg, handle_search)
+
+
+def handle_search(message):
+    search_query = message.text.strip().lower()
+    con = sl.connect('database.db')
+    with con:
+        if search_query.isdigit():
+            data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff WHERE staffid = ?", (search_query,)).fetchone()
+        else:
+            search_query_parts = search_query.split()
+            if len(search_query_parts) == 3:
+                data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff WHERE LOWER(surname) = ? AND LOWER(name) = ? AND LOWER(patronymic) = ?", search_query_parts).fetchone()
+            elif len(search_query_parts) == 2:
+                data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff WHERE LOWER(surname) = ? AND LOWER(name) = ?", search_query_parts).fetchone()
+            else:
+                data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff WHERE LOWER(surname) = ?", (search_query,)).fetchone()
+
+        if data:
+            staff_info = f"ID сотрудника - {data[0]}\nФИО - {data[1]} {data[2]} {data[3]}\nдолжность - {data[4]}\nпроект - {data[5]}\nдата прихода сотрудника - {data[6]}"
+            bot.send_message(message.chat.id, staff_info)
+        else:
+            bot.send_message(message.chat.id, "Сотрудник не найден. Проверьте введенные данные.")
+
 
 
 @bot.message_handler(commands=['start'])
