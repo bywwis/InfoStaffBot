@@ -1,6 +1,8 @@
 import telebot
 import sqlite3 as sl
 from telebot import types
+import datetime
+from datetime import datetime
 
 bot = telebot.TeleBot('7420367939:AAEvcAYcINdSu5wPSWJuhOJ_rWIfYr2OIkU')
 con = sl.connect('database.db')
@@ -84,14 +86,23 @@ def save_project(message):
 
 
 def add_date_arrival(message):
-    msg = bot.send_message(message.chat.id, 'Введите дату прихода сотрудника')
+    msg = bot.send_message(message.chat.id, 'Введите дату прихода сотрудника в формате ДД.ММ.ГГГГ')
     bot.register_next_step_handler(msg, save_date_arrival)
 
 
 def save_date_arrival(message):
     global datearrival
-    datearrival = message.text
-    add_staffid(message)
+    #today_date = datetime.today().date().strftime("%d.%m.%Y")
+    try:
+        datearrival = datetime.datetime.strptime(message.text, "%d.%m.%Y").date()
+        # if datearrival > today_date:
+        #     msg = bot.send_message(message.chat.id, "Ого, сотрудник в будущем. К сожалению, такое невозможно. Повторите попытку ввода даты.")
+        #     bot.register_next_step_handler(msg, save_date_arrival)
+        # else:
+        add_staffid(message)
+    except ValueError:
+        msg = bot.send_message(message.chat.id, "Неверный формат даты. Введите дату в формате DD.MM.YYYY:")
+        bot.register_next_step_handler(msg, save_date_arrival)
 
 
 def add_staffid(message):
