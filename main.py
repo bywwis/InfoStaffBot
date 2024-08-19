@@ -25,10 +25,6 @@ with con:
                                 """)
 
 
-def errors(message):
-    bot.send_message(message.chat.id, 'Непредвиденная ошибка. Попробуйте повторить запрос позже.')
-
-
 @bot.message_handler(commands=['add'])
 def add_surname(message):
     msg = bot.send_message(message.chat.id, 'Введите фамилию сотрудника')
@@ -38,7 +34,11 @@ def add_surname(message):
 def save_surname(message):
     global surname
     surname = message.text
-    add_name(message)
+    if surname == '-':
+        msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите фамилию.")
+        bot.register_next_step_handler(msg, add_surname)
+    else:
+        add_name(message)
 
 
 def add_name(message):
@@ -49,11 +49,15 @@ def add_name(message):
 def save_name(message):
     global name
     name = message.text
-    add_patronymic(message)
+    if surname == '-':
+        msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите имя.")
+        bot.register_next_step_handler(msg, add_name)
+    else:
+        add_patronymic(message)
 
 
 def add_patronymic(message):
-    msg = bot.send_message(message.chat.id, 'Введите отчество сотрудника')
+    msg = bot.send_message(message.chat.id, 'Введите отчество сотрудника (если нет, поставьте -)')
     bot.register_next_step_handler(msg, save_patronymic)
 
 
@@ -71,7 +75,11 @@ def add_post(message):
 def save_post(message):
     global post
     post = message.text
-    add_project(message)
+    if surname == '-':
+        msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите должность.")
+        bot.register_next_step_handler(msg, add_post)
+    else:
+        add_project(message)
 
 
 def add_project(message):
@@ -82,11 +90,15 @@ def add_project(message):
 def save_project(message):
     global project
     project = message.text
-    add_date_arrival(message)
+    if surname == '-':
+        msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите проект.")
+        bot.register_next_step_handler(msg, add_project)
+    else:
+        add_date_arrival(message)
 
 
 def add_date_arrival(message):
-    msg = bot.send_message(message.chat.id, 'Введите дату прихода сотрудника в формате ДД.ММ.ГГГГ')
+    msg = bot.send_message(message.chat.id, 'Введите дату прихода сотрудника в формате ДД.ММ.ГГГГ (если нет, поставьте -)')
     bot.register_next_step_handler(msg, save_date_arrival)
 
 
@@ -110,6 +122,7 @@ def add_staffid(message):
     bot.register_next_step_handler(msg, save_staffid)
 
 
+#id не больше 5 цифр и только цифры
 def save_staffid(message):
     global staffid
     staffid = message.text
@@ -153,6 +166,7 @@ def confirm_delete(message):
             bot.send_message(message.chat.id, "Неверный выбор. Введите команду снова.")
 
 
+#аналогично /add
 @bot.message_handler(commands=['edit'])
 def edit_staff(message):
     # keyboard = types.InlineKeyboardMarkup()
