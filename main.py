@@ -175,13 +175,13 @@ def delete_staff(message):
 
 
 def confirm_delete(message):
-    staff_id = message.text.strip()
+    staffid = message.text
     con = sl.connect('database.db')
     with con:
-        data = con.execute("SELECT staffid FROM staff WHERE staffid = ?", (staff_id,)).fetchone()
+        data = con.execute("SELECT staffid FROM staff WHERE staffid = ?", (staffid,)).fetchone()
         if data:
             with con:
-                con.execute("DELETE FROM staff WHERE staffid = ?", (staff_id,))
+                con.execute("DELETE FROM staff WHERE staffid = ?", (staffid,))
             bot.send_message(message.chat.id, "Сотрудник удален.")
         else:
             bot.send_message(message.chat.id, "Неверный выбор. Введите команду снова.")
