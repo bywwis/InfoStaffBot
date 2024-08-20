@@ -34,9 +34,12 @@ def add_surname(message):
 def save_surname(message):
     global surname
     surname = message.text
-    if surname == '-':
+    if surname.isdigit():
+        msg = bot.send_message(message.chat.id, "Буквами, пожалуйста")
+        bot.register_next_step_handler(msg, save_surname)
+    elif surname == '-':
         msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите фамилию.")
-        bot.register_next_step_handler(msg, add_surname)
+        bot.register_next_step_handler(msg, save_surname)
     else:
         add_name(message)
 
@@ -49,9 +52,12 @@ def add_name(message):
 def save_name(message):
     global name
     name = message.text
-    if surname == '-':
+    if name.isdigit():
+        msg = bot.send_message(message.chat.id, "Буквами, пожалуйста")
+        bot.register_next_step_handler(msg, save_name)
+    elif name == '-':
         msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите имя.")
-        bot.register_next_step_handler(msg, add_name)
+        bot.register_next_step_handler(msg, save_name)
     else:
         add_patronymic(message)
 
@@ -64,7 +70,11 @@ def add_patronymic(message):
 def save_patronymic(message):
     global patronymic
     patronymic = message.text
-    add_post(message)
+    if patronymic.isdigit():
+        msg = bot.send_message(message.chat.id, "Буквами, пожалуйста")
+        bot.register_next_step_handler(msg, save_patronymic)
+    else:
+        add_post(message)
 
 
 def add_post(message):
@@ -75,9 +85,9 @@ def add_post(message):
 def save_post(message):
     global post
     post = message.text
-    if surname == '-':
+    if post == '-':
         msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите должность.")
-        bot.register_next_step_handler(msg, add_post)
+        bot.register_next_step_handler(msg, save_post)
     else:
         add_project(message)
 
@@ -90,9 +100,9 @@ def add_project(message):
 def save_project(message):
     global project
     project = message.text
-    if surname == '-':
+    if project == '-':
         msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите проект.")
-        bot.register_next_step_handler(msg, add_project)
+        bot.register_next_step_handler(msg, save_project)
     else:
         add_date_arrival(message)
 
@@ -104,17 +114,21 @@ def add_date_arrival(message):
 
 def save_date_arrival(message):
     global datearrival
+    datearrival = message.text
     #today_date = datetime.today().date().strftime("%d.%m.%Y")
-    try:
-        datearrival = datetime.datetime.strptime(message.text, "%d.%m.%Y").date()
+    if datearrival != '-':
+        try:
+            datearrival = datetime.datetime.strptime(message.text, "%d.%m.%Y").date()
         # if datearrival > today_date:
         #     msg = bot.send_message(message.chat.id, "Ого, сотрудник в будущем. К сожалению, такое невозможно. Повторите попытку ввода даты.")
         #     bot.register_next_step_handler(msg, save_date_arrival)
         # else:
+            add_staffid(message)
+        except ValueError:
+            msg = bot.send_message(message.chat.id, "Неверный формат даты. Введите дату в формате DD.MM.YYYY:")
+            bot.register_next_step_handler(msg, save_date_arrival)
+    else:
         add_staffid(message)
-    except ValueError:
-        msg = bot.send_message(message.chat.id, "Неверный формат даты. Введите дату в формате DD.MM.YYYY:")
-        bot.register_next_step_handler(msg, save_date_arrival)
 
 
 def add_staffid(message):
@@ -122,11 +136,24 @@ def add_staffid(message):
     bot.register_next_step_handler(msg, save_staffid)
 
 
-#id не больше 5 цифр и только цифры
 def save_staffid(message):
     global staffid
     staffid = message.text
-    func(message, surname, name, patronymic, post, project, datearrival, staffid)
+    con = sl.connect('database.db')
+    with con:
+        data = con.execute("SELECT staffid FROM staff WHERE staffid = ?", (staffid,)).fetchone()
+        if data:
+            msg = bot.send_message(message.chat.id, "Сотрудник с таким ID уже есть. Повторите попытку.")
+            bot.register_next_step_handler(msg, save_staffid)
+            return
+    if not staffid.isdigit():
+        msg = bot.send_message(message.chat.id, "Цифрами, пожалуйста.")
+        bot.register_next_step_handler(msg, save_staffid)
+    elif len(staffid) > 5:
+        msg = bot.send_message(message.chat.id, "ID не должен превышать 5 цифр.")
+        bot.register_next_step_handler(msg, save_staffid)
+    else:
+        func(message, surname, name, patronymic, post, project, datearrival, staffid)
 
 
 def func(message, surname, name, patronymic, post, project, datearrival, staffid):
@@ -144,8 +171,7 @@ def delete_staff(message):
         data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff")
         staff_list = []
         for row in data:
-            staff_list.append(
-                f"ID сотрудника - {row[0]}\nФИО - {row[1]} {row[2]} {row[3]}\nдолжность - {row[4]}\nпроект - {row[5]}\nдата прихода сотрудника - {row[6]}\n")
+            staff_list.append(f"ID сотрудника - {row[0]}\nФИО - {row[1]} {row[2]} {row[3]}\nдолжность - {row[4]}\nпроект - {row[5]}\nдата прихода сотрудника - {row[6]}\n")
         if staff_list == []:
             bot.send_message(message.chat.id, "Нет доступных сотрудников для удаления. Добавьте сотрудника с помощью команды /add.")
         else:
@@ -169,18 +195,6 @@ def confirm_delete(message):
 #аналогично /add
 @bot.message_handler(commands=['edit'])
 def edit_staff(message):
-    # keyboard = types.InlineKeyboardMarkup()
-    # key_fio = types.InlineKeyboardButton(text='Редактировать ФИО', callback_data='edit_fio')
-    # keyboard.add(key_fio)
-    # key_post = types.InlineKeyboardButton(text='Редактировать должность', callback_data='edit_post')
-    # keyboard.add(key_post)
-    # key_project = types.InlineKeyboardButton(text='Редактировать проект', callback_data='edit_project')
-    # keyboard.add(key_project)
-    # key_datearrival = types.InlineKeyboardButton(text='Редактировать дату прихода', callback_data='edit_datearrival')
-    # keyboard.add(key_datearrival)
-    # key_all = types.InlineKeyboardButton(text='Редактировать все данные', callback_data='edit_all')
-    # keyboard.add(key_all)
-
     con = sl.connect('database.db')
     with con:
         data = con.execute("SELECT staffid, surname, name, patronymic, post, project, datearrival FROM staff")
@@ -189,45 +203,10 @@ def edit_staff(message):
             staff_list.append(
                 f"ID сотрудника - {row[0]}\nФИО - {row[1]} {row[2]} {row[3]}\nдолжность - {row[4]}\nпроект - {row[5]}\nдата прихода сотрудника - {row[6]}\n")
         if not staff_list:
-            bot.send_message(message.chat.id,
-                             "Нет доступных сотрудников для редактирования. Добавьте сотрудника с помощью команды /add.")
+            bot.send_message(message.chat.id, "Нет доступных сотрудников для редактирования. Добавьте сотрудника с помощью команды /add.")
         else:
-            msg = bot.send_message(message.chat.id,
-                                   "Введите ID сотрудника, которого нужно отредактировать:\n" + "\n".join(staff_list))
+            msg = bot.send_message(message.chat.id, "Введите ID сотрудника, которого нужно отредактировать:\n" + "\n".join(staff_list))
             bot.register_next_step_handler(msg, edit_surname)
-
-
-# @bot.callback_query_handler(func=lambda call: True)
-# def handle_edit_choice(call):
-#     global staff_id
-#     staff_id = call.message.text.split('\n')[0].split(' - ')[1]
-#     if call.data == 'edit_fio':
-#         msg = bot.send_message(call.message.chat.id, f"Введите новую фамилию для сотрудника с ID {staff_id}")
-#         bot.register_next_step_handler(msg, edit_surname)
-#     elif call.data == 'edit_post':
-#         msg = bot.send_message(call.message.chat.id, f"Введите новую должность для сотрудника с ID {staff_id}")
-#         bot.register_next_step_handler(msg, edit_post)
-#     elif call.data == 'edit_project':
-#         msg = bot.send_message(call.message.chat.id, f"Введите новый проект для сотрудника с ID {staff_id}")
-#         bot.register_next_step_handler(msg, edit_project)
-#     elif call.data == 'edit_datearrival':
-#         msg = bot.send_message(call.message.chat.id, f"Введите новую дату прихода для сотрудника с ID {staff_id}")
-#         bot.register_next_step_handler(msg, edit_date_arrival)
-#     elif call.data == 'edit_all':
-#         msg = bot.send_message(call.message.chat.id, f"Введите новую фамилию для сотрудника с ID {staff_id}")
-#         bot.register_next_step_handler(msg, edit_surname)
-#         msg = bot.send_message(call.message.chat.id, f"Введите новое имя для сотрудника с ID {staff_id}")
-#         bot.register_next_step_handler(msg, edit_name)
-#         msg = bot.send_message(call.message.chat.id, f"Введите новое отчество для сотрудника с ID {staff_id}")
-#         bot.register_next_step_handler(msg, edit_patronymic)
-#         msg = bot.send_message(call.message.chat.id, f"Введите новую должность для сотрудника с ID {staff_id}")
-#         bot.register_next_step_handler(msg, edit_post)
-#         msg = bot.send_message(call.message.chat.id, f"Введите новый проект для сотрудника с ID {staff_id}")
-#         bot.register_next_step_handler(msg, edit_project)
-#         msg = bot.send_message(call.message.chat.id, f"Введите новую дату прихода для сотрудника с ID {staff_id}")
-#         bot.register_next_step_handler(msg, edit_date_arrival)
-#     else:
-#         bot.send_message(call.message.chat.id, "Неверный выбор. Введите команду снова.")
 
 
 def edit_surname(message):
@@ -281,7 +260,6 @@ def edit_date_arrival(message):
 def save_edit(message):
     global datearrival
     datearrival = message.text
-
     con = sl.connect('database.db')
     with con:
         con.execute("UPDATE staff SET surname = ?, name = ?, patronymic = ?, post = ?, project = ?, datearrival = ? WHERE staffid = ?",
