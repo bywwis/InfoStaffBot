@@ -115,14 +115,9 @@ def add_date_arrival(message):
 def save_date_arrival(message):
     global datearrival
     datearrival = message.text
-    #today_date = datetime.today().date().strftime("%d.%m.%Y")
     if datearrival != '-':
         try:
             datearrival = datetime.datetime.strptime(message.text, "%d.%m.%Y").date()
-        # if datearrival > today_date:
-        #     msg = bot.send_message(message.chat.id, "Ого, сотрудник в будущем. К сожалению, такое невозможно. Повторите попытку ввода даты.")
-        #     bot.register_next_step_handler(msg, save_date_arrival)
-        # else:
             add_staffid(message)
         except ValueError:
             msg = bot.send_message(message.chat.id, "Неверный формат даты. Введите дату в формате DD.MM.YYYY:")
@@ -192,7 +187,6 @@ def confirm_delete(message):
             bot.send_message(message.chat.id, "Неверный выбор. Введите команду снова.")
 
 
-#аналогично /add
 @bot.message_handler(commands=['edit'])
 def edit_staff(message):
     con = sl.connect('database.db')
@@ -216,7 +210,7 @@ def edit_surname(message):
     with con:
         data = con.execute("SELECT staffid FROM staff WHERE staffid = ?", (staff_id,)).fetchone()
         if data:
-            msg = bot.send_message(message.chat.id, "Введите новую фамилию сотрудника")
+            msg = bot.send_message(message.chat.id, "Введите новую фамилию сотрудника.")
             bot.register_next_step_handler(msg, edit_name)
         else:
             bot.send_message(message.chat.id, "Неверный выбор. Введите команду снова.")
@@ -225,41 +219,79 @@ def edit_surname(message):
 def edit_name(message):
     global surname
     surname = message.text
-    msg = bot.send_message(message.chat.id, "Введите новое имя сотрудника")
-    bot.register_next_step_handler(msg, edit_patronymic)
+    if surname.isdigit():
+        msg = bot.send_message(message.chat.id, "Буквами, пожалуйста.")
+        bot.register_next_step_handler(msg, edit_name)
+    elif surname == '-':
+        msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите фамилию.")
+        bot.register_next_step_handler(msg, edit_name)
+    else:
+        msg = bot.send_message(message.chat.id, "Введите новое имя сотрудника.")
+        bot.register_next_step_handler(msg, edit_patronymic)
 
 
 def edit_patronymic(message):
     global name
     name = message.text
-    msg = bot.send_message(message.chat.id, "Введите новое отчество сотрудника")
-    bot.register_next_step_handler(msg, edit_post)
+    if name.isdigit():
+        msg = bot.send_message(message.chat.id, "Буквами, пожалуйста")
+        bot.register_next_step_handler(msg, edit_patronymic)
+    elif name == '-':
+        msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите имя.")
+        bot.register_next_step_handler(msg, edit_patronymic)
+    else:
+        msg = bot.send_message(message.chat.id, "Введите новое отчество сотрудника (если нет, поставьте -).")
+        bot.register_next_step_handler(msg, edit_post)
 
 
 def edit_post(message):
     global patronymic
     patronymic = message.text
-    msg = bot.send_message(message.chat.id, "Введите новую должность сотрудника")
-    bot.register_next_step_handler(msg, edit_project)
+    if patronymic.isdigit():
+        msg = bot.send_message(message.chat.id, "Буквами, пожалуйста.")
+        bot.register_next_step_handler(msg, edit_post)
+    else:
+        msg = bot.send_message(message.chat.id, "Введите новую должность сотрудника.")
+        bot.register_next_step_handler(msg, edit_project)
 
 
 def edit_project(message):
     global post
     post = message.text
-    msg = bot.send_message(message.chat.id, "Введите новый проект сотрудника")
-    bot.register_next_step_handler(msg, edit_date_arrival)
+    if post == '-':
+        msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите должность.")
+        bot.register_next_step_handler(msg, edit_project)
+    else:
+        msg = bot.send_message(message.chat.id, "Введите новый проект сотрудника.")
+        bot.register_next_step_handler(msg, edit_date_arrival)
 
 
 def edit_date_arrival(message):
     global project
     project = message.text
-    msg = bot.send_message(message.chat.id, "Введите новую дату прихода сотрудника")
-    bot.register_next_step_handler(msg, save_edit)
+    if project == '-':
+        msg = bot.send_message(message.chat.id, "Это поле обязательно для заполнения. Введите проект.")
+        bot.register_next_step_handler(msg, edit_date_arrival)
+    else:
+        msg = bot.send_message(message.chat.id, "Введите новую дату прихода сотрудника (если нет, поставьте -)")
+        bot.register_next_step_handler(msg, save_edit)
 
 
 def save_edit(message):
     global datearrival
     datearrival = message.text
+    if datearrival != '-':
+        try:
+            datearrival = datetime.datetime.strptime(message.text, "%d.%m.%Y").date()
+            update(message, surname, name, patronymic, post, project, datearrival)
+        except ValueError:
+            msg = bot.send_message(message.chat.id, "Неверный формат даты. Введите дату в формате DD.MM.YYYY:")
+            bot.register_next_step_handler(msg, save_edit)
+    else:
+        update(message, surname, name, patronymic, post, project, datearrival)
+
+
+def update(message, surname, name, patronymic, post, project, datearrival):
     con = sl.connect('database.db')
     with con:
         con.execute("UPDATE staff SET surname = ?, name = ?, patronymic = ?, post = ?, project = ?, datearrival = ? WHERE staffid = ?",
@@ -269,7 +301,7 @@ def save_edit(message):
 
 @bot.message_handler(commands=['search'])
 def search_staff(message):
-    msg = bot.send_message(message.chat.id, "Введите ФИО или ID сотрудника для поиска:")
+    msg = bot.send_message(message.chat.id, "Введите ФИО или ID сотрудника для поиска.")
     bot.register_next_step_handler(msg, handle_search)
 
 
